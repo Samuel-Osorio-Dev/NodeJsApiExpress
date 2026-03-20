@@ -1,17 +1,76 @@
 # API REST Restaurante – SENA
 
 ## Descripción
-API REST desarrollada con Node.js y Express.js para un sistema de restaurante. Implementa CRUD completo para 4 recursos: Platos, Ingredientes, Mesas y Órdenes.
+API REST desarrollada con Node.js, Express.js y SQLite para un sistema de restaurante. Implementa CRUD completo para 4 recursos: Platos, Ingredientes, Mesas y Órdenes.
+
+## Diagrama ER
+![Diagrama ER](assets/diagrama-er.png)
+
+## Diccionario de Datos
+
+### Tabla: mesas
+| Campo | Tipo | PK | FK | Restricción | Descripción |
+|-------|------|----|----|-------------|-------------|
+| id | INTEGER | SI | NO | AUTOINCREMENT | Identificador único |
+| numero | INTEGER | NO | NO | NOT NULL, UNIQUE | Número de la mesa |
+| capacidad | INTEGER | NO | NO | NOT NULL, > 0 | Cantidad de personas |
+| estado | TEXT | NO | NO | NOT NULL, DEFAULT 'disponible' | disponible / ocupada |
+| activa | INTEGER | NO | NO | DEFAULT 1 | 1 = activa, 0 = inactiva |
+
+### Tabla: ordenes
+| Campo | Tipo | PK | FK | Restricción | Descripción |
+|-------|------|----|----|-------------|-------------|
+| id | INTEGER | SI | NO | AUTOINCREMENT | Identificador único |
+| mesaId | INTEGER | NO | SI | NOT NULL, FK -> mesas.id | Mesa que hizo la orden |
+| total | REAL | NO | NO | NOT NULL, > 0 | Total de la orden |
+| estado | TEXT | NO | NO | NOT NULL, DEFAULT 'pendiente' | pendiente / entregada / cancelada |
+| fecha | TEXT | NO | NO | NOT NULL | Fecha de la orden |
+
+### Tabla: platos
+| Campo | Tipo | PK | FK | Restricción | Descripción |
+|-------|------|----|----|-------------|-------------|
+| id | INTEGER | SI | NO | AUTOINCREMENT | Identificador único |
+| nombre | TEXT | NO | NO | NOT NULL, UNIQUE | Nombre del plato |
+| precio | REAL | NO | NO | NOT NULL, > 0 | Precio de venta |
+| categoria | TEXT | NO | NO | NOT NULL | Tipo de plato |
+| stock | INTEGER | NO | NO | NOT NULL, >= 0 | Unidades disponibles |
+| activo | INTEGER | NO | NO | DEFAULT 1 | 1 = activo, 0 = inactivo |
+
+### Tabla: ingredientes
+| Campo | Tipo | PK | FK | Restricción | Descripción |
+|-------|------|----|----|-------------|-------------|
+| id | INTEGER | SI | NO | AUTOINCREMENT | Identificador único |
+| nombre | TEXT | NO | NO | NOT NULL, UNIQUE | Nombre del ingrediente |
+| unidad | TEXT | NO | NO | NOT NULL | kg, litros, unidades, etc. |
+| stock | INTEGER | NO | NO | NOT NULL, >= 0 | Cantidad disponible |
+| activo | INTEGER | NO | NO | DEFAULT 1 | 1 = activo, 0 = inactivo |
 
 ## Tecnologías
 - Node.js v22
 - Express.js
+- SQLite3
 - Thunder Client / Postman
 
 ## Instalación
 ```bash
 npm install
 node index.js
+```
+
+## Estructura del proyecto
+```
+restaurante/
+├── index.js
+├── db.js
+├── database.db
+├── package.json
+├── assets/
+│   └── diagrama-er.png
+└── routes/
+    ├── platos.js
+    ├── ingredientes.js
+    ├── mesas.js
+    └── ordenes.js
 ```
 
 ## Endpoints
@@ -79,21 +138,8 @@ Authorization: Bearer mi-token-123
 ```json
 {
   "mesaId": 1,
-  "platos": [1, 2],
   "total": 43000
 }
-```
-
-## Estructura del proyecto
-```
-restaurante/
-├── index.js
-├── package.json
-└── routes/
-    ├── platos.js
-    ├── ingredientes.js
-    ├── mesas.js
-    └── ordenes.js
 ```
 
 ## Integrantes

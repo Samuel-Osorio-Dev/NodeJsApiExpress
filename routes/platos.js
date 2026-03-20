@@ -1,63 +1,116 @@
 const express = require('express');
 const router = express.Router();
-
-let platos = [
-  { id: 1, nombre: 'Bandeja Paisa', precio: 25000, categoria: 'plato fuerte', stock: 10, activo: true },
-  { id: 2, nombre: 'Ajiaco', precio: 18000, categoria: 'sopa', stock: 8, activo: true },
-  { id: 3, nombre: 'Empanadas', precio: 5000, categoria: 'entrada', stock: 20, activo: true },
-];
+const db = require('../db');
 
 // GET /platos — lista todos, soporta filtro por query
 router.get('/', (req, res) => {
   const token = req.headers['authorization'];
-  const filtros = req.query;
-  const data = platos.filter(p =>
-    Object.entries(filtros).every(([k, v]) =>
-      p[k]?.toString().toLowerCase().includes(v.toLowerCase())
-    )
-  );
-  res.json({ success: true, total: data.length, headers: { token }, data });
+  const { nombre, categoria } = req.query;
+
+  let query = 'SELECT * FROM platos WHERE 1=1';
+  const params = [];
+
+  if (nombre) {
+    query += ' AND nombre LIKE ?';
+    params.push(`%${nombre}%`);
+  }
+  if (categoria) {
+    query += ' AND categoria LIKE ?';
+    params.push(`%${categoria}%`);
+  }
+
+  db.all(query, params, (err, rows) => {
+    if (err) return res.status(500).json({ success: false, message: err.message });
+    res.json({ success: true, total: rows.length, headers: { token }, data: rows });
+  });
 });
 
 // GET /platos/:id — obtener por id
 router.get('/:id', (req, res) => {
-  const plato = platos.find(p => p.id === parseInt(req.params.id));
-  if (!plato) return res.status(404).json({ success: false, message: 'Plato no encontrado' });
-  res.json({ success: true, data: plato });
+  db.get('SELECT * FROM platos WHERE id = ?', [req.params.id], (err, row) => {
+    if (err) return res.status(500).json({ success: false, message: err.message });
+    if (!row) return res.status(404).json({ success: false, message: 'Plato no encontrado' });
+    res.json({ success: true, data: row });
+  });
 });
 
 // POST /platos — crear nuevo plato
 router.post('/', (req, res) => {
   const { nombre, precio, categoria, stock } = req.body;
+
+  // Validación obligatorios
   if (!nombre || !precio || !categoria) {
-    return res.status(400).json({ success: false, message: 'Faltan campos obligatorios: nombre, precio, categoria' });
+    return res.status(400).json({ success: false, message: 'nombre, precio y categoria son obligatorios' });
   }
-  const nuevo = {
-    id: platos.length + 1,
-    nombre,
-    precio,
-    categoria,
-    stock: stock || 0,
-    activo: true,
-  };
-  platos.push(nuevo);
-  res.status(201).json({ success: true, message: 'Plato creado correctamente', data: nuevo });
+  // Validación tipos
+  if (isNaN(precio) || precio <= 0) {
+    return res.status(400).json({ success: false, message: 'precio debe ser un número mayor a 0' });
+  }
+  if (stock !== undefined && (!Number.isInteger(Number(stock)) || stock < 0)) {
+    return res.status(400).json({ success: false, message: 'stock debe ser un entero mayor o igual a 0' });
+  }
+
+  // Validación unicidad
+  db.get('SELECT id FROM platos WHERE nombre = ?', [nombre], (err, row) => {
+    if (row) return res.status(400).json({ success: false, message: 'Ya existe un plato con ese nombre' });
+
+    db.run(
+      'INSERT INTO platos (nombre, precio, categoria, stock) VALUES (?, ?, ?, ?)',
+      [nombre, precio, categoria, stock || 0],
+      function (err) {
+        if (err) return res.status(500).json({ success: false, message: err.message });
+        res.status(201).json({ success: true, message: 'Plato creado correctamente', data: { id: this.lastID, nombre, precio, categoria, stock: stock || 0 } });
+      }
+    );
+  });
 });
 
 // PUT /platos/:id — actualizar plato
 router.put('/:id', (req, res) => {
-  const index = platos.findIndex(p => p.id === parseInt(req.params.id));
-  if (index === -1) return res.status(404).json({ success: false, message: 'Plato no encontrado' });
-  platos[index] = { ...platos[index], ...req.body };
-  res.json({ success: true, message: 'Plato actualizado correctamente', data: platos[index] });
+  const { nombre, precio, categoria, stock, activo } = req.body;
+
+  // Validación tipos
+  if (precio !== undefined && (isNaN(precio) || precio <= 0)) {
+    return res.status(400).json({ success: false, message: 'precio debe ser un número mayor a 0' });
+  }
+  if (stock !== undefined && (!Number.isInteger(Number(stock)) || stock < 0)) {
+    return res.status(400).json({ success: false, message: 'stock debe ser un entero mayor o igual a 0' });
+  }
+
+  db.get('SELECT * FROM platos WHERE id = ?', [req.params.id], (err, row) => {
+    if (err) return res.status(500).json({ success: false, message: err.message });
+    if (!row) return res.status(404).json({ success: false, message: 'Plato no encontrado' });
+
+    const actualizado = {
+      nombre: nombre || row.nombre,
+      precio: precio || row.precio,
+      categoria: categoria || row.categoria,
+      stock: stock !== undefined ? stock : row.stock,
+      activo: activo !== undefined ? activo : row.activo,
+    };
+
+    db.run(
+      'UPDATE platos SET nombre = ?, precio = ?, categoria = ?, stock = ?, activo = ? WHERE id = ?',
+      [actualizado.nombre, actualizado.precio, actualizado.categoria, actualizado.stock, actualizado.activo, req.params.id],
+      function (err) {
+        if (err) return res.status(500).json({ success: false, message: err.message });
+        res.json({ success: true, message: 'Plato actualizado correctamente', data: { id: parseInt(req.params.id), ...actualizado } });
+      }
+    );
+  });
 });
 
 // DELETE /platos/:id — eliminar plato
 router.delete('/:id', (req, res) => {
-  const index = platos.findIndex(p => p.id === parseInt(req.params.id));
-  if (index === -1) return res.status(404).json({ success: false, message: 'Plato no encontrado' });
-  const eliminado = platos.splice(index, 1);
-  res.json({ success: true, message: 'Plato eliminado correctamente', data: eliminado[0] });
+  db.get('SELECT * FROM platos WHERE id = ?', [req.params.id], (err, row) => {
+    if (err) return res.status(500).json({ success: false, message: err.message });
+    if (!row) return res.status(404).json({ success: false, message: 'Plato no encontrado' });
+
+    db.run('DELETE FROM platos WHERE id = ?', [req.params.id], (err) => {
+      if (err) return res.status(500).json({ success: false, message: err.message });
+      res.json({ success: true, message: 'Plato eliminado correctamente', data: row });
+    });
+  });
 });
 
 module.exports = router;
