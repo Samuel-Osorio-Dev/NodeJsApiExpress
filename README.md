@@ -1,7 +1,18 @@
 # API REST Restaurante – SENA
 
-## Descripción
-API REST desarrollada con Node.js, Express.js y SQLite para un sistema de restaurante. Implementa CRUD completo para 4 recursos: Platos, Ingredientes, Mesas y Órdenes.
+## Equipo
+| Nombre | Rol |
+|--------|-----|
+| Samuel Osorio | Tech Lead / Backend Developer |
+
+## URL de la API en producción
+https://api-restaurante-sena.onrender.com
+
+## Autenticación
+Todos los endpoints requieren el siguiente header:
+```
+password: MiPasswordSegura2026
+```
 
 ## Diagrama ER
 ![Diagrama ER](assets/diagrama-er.png)
@@ -49,6 +60,7 @@ API REST desarrollada con Node.js, Express.js y SQLite para un sistema de restau
 - Node.js v22
 - Express.js
 - SQLite3
+- dotenv
 - Thunder Client / Postman
 
 ## Instalación
@@ -63,6 +75,7 @@ restaurante/
 ├── index.js
 ├── db.js
 ├── database.db
+├── .env
 ├── package.json
 ├── assets/
 │   └── diagrama-er.png
@@ -113,39 +126,25 @@ restaurante/
 
 ## Ejemplos de uso
 
+### Con curl
+```bash
+curl https://api-restaurante-sena.onrender.com/platos \
+     -H "password: MiPasswordSegura2026"
+```
+
 ### Filtro por query params
 ```
 GET /platos?categoria=sopa
 GET /mesas?estado=disponible
 ```
 
-### Header requerido
-```
-Authorization: Bearer mi-token-123
-```
-
-### Ejemplo POST /platos
-```json
-{
-  "nombre": "Cazuela de Mariscos",
-  "precio": 32000,
-  "categoria": "plato fuerte",
-  "stock": 5
-}
-```
-
-### Ejemplo POST /ordenes
-```json
-{
-  "mesaId": 1,
-  "total": 43000
-}
-```
-
-## Integrantes
-| Nombre | Rol |
-|--------|-----|
-| Samuel Osorio | Tech Lead / Backend Developer |
+## Casos de error
+| Caso | Código |
+|------|--------|
+| Sin header password | 401 Unauthorized |
+| Password incorrecta | 403 Forbidden |
+| ID no existe | 404 Not Found |
+| Campos obligatorios vacíos | 400 Bad Request |
 
 ## Programa
 SENA – Tecnología en Análisis y Desarrollo de Software  
